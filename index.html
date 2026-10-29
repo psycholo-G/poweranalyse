@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poweranalyse-Rechner</title>
+<meta name="description" content="Stichprobenplanung und Poweranalyse im Browser: a priori, post hoc und Sensitivität für t-Tests, Varianzanalysen, Regression, χ²-Tests und Korrelationen.">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f5f2; --surface:#fcfcfb; --surface-2:#f0efeb; --border:#dcdad3;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#77756f;
+  --accent:#2a78d6; --accent-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834;
+  --s1-fill:rgba(42,120,214,.20); --s2-fill:rgba(235,104,52,.22);
+  --grid:#e7e5e0; --error:#b3261e; --error-bg:#fbeceb;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#363531;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8d86;
+    --accent:#3987e5; --accent-ink:#ffffff;
+    --s1:#3987e5; --s2:#d95926;
+    --s1-fill:rgba(57,135,229,.28); --s2-fill:rgba(217,89,38,.30);
+    --grid:#2c2b28; --error:#ff8a80; --error-bg:#3a1f1d;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#363531;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8d86;
+  --accent:#3987e5; --accent-ink:#ffffff;
+  --s1:#3987e5; --s2:#d95926;
+  --s1-fill:rgba(57,135,229,.28); --s2-fill:rgba(217,89,38,.30);
+  --grid:#2c2b28; --error:#ff8a80; --error-bg:#3a1f1d;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+header h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:-.01em}
+header p{margin:0;color:var(--text-2);max-width:70ch}
+.layout{display:grid;gap:20px;margin-top:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:920px){.layout{grid-template-columns:380px minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.card + .card{margin-top:16px}
+h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin:0 0 12px;font-weight:600}
+h3{font-size:1rem;margin:0 0 8px}
+label{display:block;font-weight:600;font-size:.88rem;margin-bottom:4px}
+select,input[type=text]{width:100%;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;min-height:38px}
+select:focus,input:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input.bad{border-color:var(--error)}
+.field{margin-bottom:14px}
+.field .hint{font-size:.8rem;color:var(--muted);margin-top:3px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:9px;padding:3px;gap:3px;margin-bottom:8px}
+.seg button{font:inherit;font-size:.86rem;border:0;background:transparent;color:var(--text-2);padding:7px 4px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.analysis-hint{font-size:.85rem;color:var(--text-2);margin:4px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font:inherit;font-size:.78rem;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);border-radius:999px;padding:3px 10px;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+details.helper{margin-top:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+details.helper summary{cursor:pointer;padding:7px 10px;font-size:.84rem;color:var(--text-2);font-weight:600}
+details.helper .inner{padding:4px 10px 10px}
+.hblock{border-top:1px solid var(--border);padding-top:10px;margin-top:6px}
+.hblock:first-child{border-top:0;margin-top:0;padding-top:2px}
+.hblock .title{font-size:.84rem;font-weight:600;margin-bottom:6px}
+.hblock label{font-weight:500;font-size:.8rem}
+.hblock .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.hblock .out{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:.88rem;flex-wrap:wrap}
+.btn{font:inherit;font-size:.82rem;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:7px;padding:5px 12px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.note{font-size:.82rem;color:var(--text-2);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin:0 0 14px}
+.headline{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.headline .big{font-size:2.6rem;font-weight:700;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.headline .lbl{color:var(--text-2)}
+.sub{color:var(--text-2);font-size:.9rem;margin:0 0 14px}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:0}
+.kv div{background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.kv dt{font-size:.76rem;color:var(--text-2)}
+.kv dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+.errorbox{background:var(--error-bg);color:var(--error);border-radius:8px;padding:10px 12px;font-size:.9rem}
+.report{background:var(--surface-2);border-radius:8px;padding:12px;font-size:.92rem;line-height:1.55}
+.report-actions{display:flex;justify-content:flex-end;margin-top:8px;gap:8px;align-items:center}
+.report-actions span{font-size:.8rem;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:var(--text-2);margin-bottom:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px}
+.sw.box{height:10px;width:14px;border-radius:2px}
+.sw.dash{height:0;border-top:2px dashed var(--text-2);width:16px;border-radius:0}
+.plot{position:relative}
+.plot svg{width:100%;height:auto;display:block;overflow:visible}
+.plot text{fill:var(--text-2);font-size:12px;font-family:inherit}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 9px;
+  font-size:.78rem;box-shadow:0 2px 10px rgba(0,0,0,.15);white-space:nowrap;display:none;z-index:2;font-variant-numeric:tabular-nums}
+.tip b{font-weight:600}
+.tip .k{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+table.data{border-collapse:collapse;font-size:.84rem;margin-top:6px;font-variant-numeric:tabular-nums}
+table.data th,table.data td{padding:3px 12px 3px 0;text-align:right;border-bottom:1px solid var(--border)}
+table.data th{color:var(--text-2);font-weight:600}
+details.plain summary{cursor:pointer;font-size:.84rem;color:var(--text-2);margin-top:6px}
+.busy{opacity:.55;transition:opacity .15s}
+footer{margin-top:28px;font-size:.84rem;color:var(--text-2)}
+footer h2{margin-top:18px}
+footer p,footer li{max-width:85ch}
+footer ul{padding-left:18px;margin:6px 0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Poweranalyse-Rechner</h1>
+    <p>Stichprobenplanung direkt im Browser: Wie viele Personen braucht meine Studie, welche Power hat sie, und welche Effekte kann sie entdecken? Die Berechnungen folgen den in G*Power dokumentierten Verfahren und laufen vollständig lokal, es werden keine Daten übertragen.</p>
+  </header>
+
+  <div class="layout">
+    <div>
+      <section class="card" aria-labelledby="h-test">
+        <h2 id="h-test">1. Test und Analyseart</h2>
+        <div class="field">
+          <label for="test">Statistischer Test</label>
+          <select id="test"></select>
+        </div>
+        <div class="seg" role="group" aria-label="Analyseart">
+          <button type="button" data-a="apriori" aria-pressed="true">A priori</button>
+          <button type="button" data-a="posthoc" aria-pressed="false">Post hoc</button>
+          <button type="button" data-a="sens" aria-pressed="false">Sensitivität</button>
+        </div>
+        <p class="analysis-hint" id="analysisHint"></p>
+      </section>
+
+      <section class="card" aria-labelledby="h-in">
+        <h2 id="h-in">2. Eingaben</h2>
+        <div id="testNote"></div>
+        <div id="fields"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="card" aria-labelledby="h-out" aria-live="polite">
+        <h2 id="h-out">3. Ergebnis</h2>
+        <div id="result"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-dist">
+        <h2 id="h-dist">Verteilungen unter H0 und H1</h2>
+        <div class="legend" id="distLegend"></div>
+        <div class="plot" id="distPlot"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-curve">
+        <h2 id="h-curve">Power in Abhängigkeit von der Stichprobengröße</h2>
+        <div class="plot" id="curvePlot"></div>
+        <details class="plain"><summary>Werte als Tabelle</summary><div id="curveTable"></div></details>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <h2>Hinweise</h2>
+    <ul>
+      <li><b>A priori</b> ist die Analyse für die Studienplanung. Die erwartete Effektgröße sollte begründet sein (Vorstudien, Metaanalysen, kleinster praktisch relevanter Effekt), nicht einfach „mittel“.</li>
+      <li><b>Post-hoc-Power</b>, die mit dem in der eigenen Studie beobachteten Effekt berechnet wird, ist wenig informativ: Sie ist eine reine Umrechnung des p-Werts. Sinnvoller ist meist eine Sensitivitätsanalyse.</li>
+      <li>Bei Varianzanalysen wird das Gesamt-N wie in G*Power auf gleich große Gruppen aufgerundet (Vielfaches der Gruppen- bzw. Zellenzahl).</li>
+      <li>Bei einseitigen Tests wird angenommen, dass der Effekt in der vorhergesagten Richtung liegt. Effektgrößen werden deshalb als Beträge verwendet.</li>
+      <li>Der Korrelationstest nutzt die exakte Verteilung von r unter bivariater Normalverteilung (H0: ρ = 0).</li>
+    </ul>
+    <h2>Literatur</h2>
+    <ul>
+      <li>Cohen, J. (1988). <i>Statistical power analysis for the behavioral sciences</i> (2nd ed.). Erlbaum.</li>
+      <li>Faul, F., Erdfelder, E., Lang, A.-G. &amp; Buchner, A. (2007). G*Power 3: A flexible statistical power analysis program for the social, behavioral, and biomedical sciences. <i>Behavior Research Methods, 39</i>, 175–191.</li>
+      <li>Faul, F., Erdfelder, E., Buchner, A. &amp; Lang, A.-G. (2009). Statistical power analyses using G*Power 3.1: Tests for correlation and regression analyses. <i>Behavior Research Methods, 41</i>, 1149–1160.</li>
+    </ul>
+  </footer>
+</div>
+
+<!-- ===================== Statistik-Kern (ohne DOM) ===================== -->
+<script id="core">
+const Stat = (() => {
+  const LG = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  function lgamma(x) {
+    if (x < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - lgamma(1 - x);
+    x -= 1;
+    let a = LG[0];
+    const t = x + 7.5;
+    for (let i = 1; i < 9; i++) a += LG[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  }
+
+  const FPMIN = 1e-300, EPS = 1e-15;
+
+  // Kettenbruch der unvollständigen Betafunktion (Lentz)
+  function betacf(x, a, b) {
+    const qab = a + b, qap = a + 1, qam = a - 1;
+    let c = 1, d = 1 - qab * x / qap;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    d = 1 / d;
+    let h = d;
+    for (let m = 1; m <= 50000; m++) {
+      const m2 = 2 * m;
+      let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+      c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+      d = 1 / d; h *= d * c;
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+      c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+      d = 1 / d;
+      const del = d * c;
+      h *= del;
+      if (Math.abs(del - 1) < EPS) break;
+    }
+    return h;
+  }
+  // regularisierte unvollständige Betafunktion I_x(a, b)
+  function ibeta(x, a, b) {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    const lbt = lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log1p(-x);
+    if (x < (a + 1) / (a + b + 2)) return Math.exp(lbt) * betacf(x, a, b) / a;
+    return 1 - Math.exp(lbt) * betacf(1 - x, b, a) / b;
+  }
+
+  // regularisierte unvollständige Gammafunktion P(a, x) und Q(a, x)
+  function gammaSeries(a, x) {
+    let ap = a, sum = 1 / a, del = sum;
+    for (let n = 0; n < 200000; n++) {
+      ap += 1; del *= x / ap; sum += del;
+      if (Math.abs(del) < Math.abs(sum) * 1e-16) break;
+    }
+    return Math.min(1, sum * Math.exp(-x + a * Math.log(x) - lgamma(a)));
+  }
+  function gammaCF(a, x) {
+    let b = x + 1 - a, c = 1 / FPMIN, d = 1 / b, h = d;
+    for (let i = 1; i < 200000; i++) {
+      const an = -i * (i - a);
+      b += 2;
+      d = an * d + b; if (Math.abs(d) < FPMIN) d = FPMIN;
+      c = b + an / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+      d = 1 / d;
+      const del = d * c;
+      h *= del;
+      if (Math.abs(del - 1) < EPS) break;
+    }
+    return Math.exp(-x + a * Math.log(x) - lgamma(a)) * h;
+  }
+  function gammaP(a, x) { if (x <= 0) return 0; return x < a + 1 ? gammaSeries(a, x) : 1 - gammaCF(a, x); }
+  function gammaQ(a, x) { if (x <= 0) return 1; return x < a + 1 ? 1 - gammaSeries(a, x) : gammaCF(a, x); }
+
+  function normCdf(z) {
+    if (!isFinite(z)) return z > 0 ? 1 : 0;
+    const q = 0.5 * gammaQ(0.5, z * z / 2);
+    return z < 0 ? q : 1 - q;
+  }
+
+  // Bisektion für monoton steigende Funktionen auf [lo, hi]
+  function bisect(f, target, lo, hi, iters = 200) {
+    for (let i = 0; i < iters; i++) {
+      const mid = 0.5 * (lo + hi);
+      if (mid === lo || mid === hi) break;
+      if (f(mid) < target) lo = mid; else hi = mid;
+    }
+    return 0.5 * (lo + hi);
+  }
+
+  // ---- zentrale Verteilungen ----
+  function tCdf(t, df) {
+    if (!isFinite(t)) return t > 0 ? 1 : 0;
+    const tail = 0.5 * ibeta(df / (df + t * t), df / 2, 0.5);
+    return t > 0 ? 1 - tail : tail;
+  }
+  // t mit P(T > t) = pUpper
+  function tQuantileUpper(pUpper, df) {
+    // 0.5 * I_x(df/2, 1/2) = pUpper, x = df / (df + t^2); I_x steigt in x
+    const x = bisect(x => 0.5 * ibeta(x, df / 2, 0.5), pUpper, 0, 1);
+    return Math.sqrt(df * (1 - x) / x);
+  }
+  function fCdf(x, d1, d2) { return x <= 0 ? 0 : ibeta(d1 * x / (d1 * x + d2), d1 / 2, d2 / 2); }
+  // F mit P(F <= x) = p
+  function fQuantile(p, d1, d2) {
+    const y = bisect(y => ibeta(y, d1 / 2, d2 / 2), p, 0, 1);
+    return d2 * y / (d1 * (1 - y));
+  }
+  function chiCdf(x, df) { return x <= 0 ? 0 : gammaP(df / 2, x / 2); }
+  function chiQuantile(p, df) {
+    let hi = Math.max(1, df);
+    while (chiCdf(hi, df) < p) hi *= 2;
+    return bisect(x => chiCdf(x, df), p, 0, hi);
+  }
+
+  // ---- nonzentrale t-Verteilung (Lenth, 1989, AS 243) ----
+  function nctCdf(t, df, delta) {
+    if (!isFinite(t)) return t > 0 ? 1 : 0;
+    let neg = false, tt = t, del = delta;
+    if (t < 0) { neg = true; tt = -t; del = -delta; }
+    let res;
+    if (Math.abs(del) > 37) {
+      // Normalapproximation (Abramowitz & Stegun 26.7.10); Power ist hier praktisch 0 oder 1
+      const z = (tt * (1 - 1 / (4 * df)) - del) / Math.sqrt(1 + tt * tt / (2 * df));
+      res = normCdf(z);
+    } else {
+      const x = tt * tt / (tt * tt + df);
+      let tnc = 0;
+      if (x > 0) {
+        const lambda = del * del;
+        let p = 0.5 * Math.exp(-0.5 * lambda);
+        let q = Math.sqrt(2 / Math.PI) * p * del;
+        let s = 0.5 - p;
+        if (s < 1e-7) s = -0.5 * Math.expm1(-0.5 * lambda);
+        let a = 0.5;
+        const b = 0.5 * df;
+        const rxb = Math.pow(1 - x, b);
+        const albeta = 0.5 * Math.log(Math.PI) + lgamma(b) - lgamma(0.5 + b);
+        let xodd = ibeta(x, a, b);
+        let godd = 2 * rxb * Math.exp(a * Math.log(x) - albeta);
+        let xeven = -Math.expm1(b * Math.log1p(-x));
+        let geven = b * x * rxb;
+        tnc = p * xodd + q * xeven;
+        for (let en = 1; en <= 20000; en++) {
+          a += 1;
+          xodd -= godd;
+          xeven -= geven;
+          godd *= x * (a + b - 1) / a;
+          geven *= x * (a + b - 0.5) / (a + 0.5);
+          p *= lambda / (2 * en);
+          q *= lambda / (2 * en + 1);
+          s -= p;
+          tnc += p * xodd + q * xeven;
+          const errbd = 2 * s * (xodd - godd);
+          if (Math.abs(errbd) < 1e-14 && en > lambda / 2) break;
+        }
+      }
+      res = tnc + normCdf(-del);
+    }
+    if (neg) res = 1 - res;
+    return Math.min(1, Math.max(0, res));
+  }
+
+  // Poisson-Mischung, vom Modus aus summiert (stabil auch für großes lambda)
+  function poissonMix(lam, termFn) {
+    const h = lam / 2;
+    const k = Math.floor(h);
+    const pk = Math.exp(k * Math.log(h) - h - lgamma(k + 1));
+    let sum = 0, p = pk;
+    for (let j = k; j < k + 1e6; j++) {
+      sum += p * termFn(j);
+      p *= h / (j + 1);
+      if (p < 1e-17 && j > k + 3) break;
+    }
+    p = pk;
+    for (let j = k - 1; j >= 0; j--) {
+      p *= (j + 1) / h;
+      sum += p * termFn(j);
+      if (p < 1e-17) break;
+    }
+    return sum;
+  }
+  function ncfCdf(x, d1, d2, lam) {
+    if (x <= 0) return 0;
+    const y = d1 * x / (d1 * x + d2);
+    if (!(lam > 0)) return ibeta(y, d1 / 2, d2 / 2);
+    return Math.min(1, poissonMix(lam, j => ibeta(y, d1 / 2 + j, d2 / 2)));
+  }
+  function ncChiCdf(x, df, lam) {
+    if (x <= 0) return 0;
+    if (!(lam > 0)) return gammaP(df / 2, x / 2);
+    return Math.min(1, poissonMix(lam, j => gammaP(df / 2 + j, x / 2)));
+  }
+
+  // ---- exakte Verteilung des Korrelationskoeffizienten r (bivariate Normalverteilung) ----
+  function hyp2f1Half(c, z) { // 2F1(1/2, 1/2; c; z)
+    let term = 1, sum = 1;
+    for (let k = 0; k < 300000; k++) {
+      term *= (k + 0.5) * (k + 0.5) / ((c + k) * (k + 1)) * z;
+      sum += term;
+      if (term < 1e-16 * sum) break;
+    }
+    return sum;
+  }
+  // Dichte von r; omr2 = 1 - r^2 (separat übergeben, um Genauigkeit am Rand zu halten)
+  function rPdf(r, n, rho, omr2) {
+    if (omr2 === undefined) omr2 = 1 - r * r;
+    if (!(omr2 > 0)) return 0;
+    const logf = Math.log(n - 2) + lgamma(n - 1) - 0.5 * Math.log(2 * Math.PI) - lgamma(n - 0.5)
+      + ((n - 1) / 2) * Math.log1p(-rho * rho) + ((n - 4) / 2) * Math.log(omr2)
+      - (n - 1.5) * Math.log1p(-rho * r);
+    return Math.exp(logf) * hyp2f1Half(n - 0.5, (1 + rho * r) / 2);
+  }
+  // P(lo < r < hi), integriert im Fisher-z-Raum (Simpson)
+  function rProb(n, rho, lo, hi) {
+    const mu = Math.atanh(rho), s = 1 / Math.sqrt(Math.max(n - 3, 1));
+    let za = lo <= -1 ? -Infinity : Math.atanh(lo);
+    let zb = hi >= 1 ? Infinity : Math.atanh(hi);
+    za = Math.max(za, mu - 14 * s);
+    zb = Math.min(zb, mu + 14 * s);
+    if (!(zb > za)) return 0;
+    const N = 600, hstep = (zb - za) / N;
+    const g = z => { const ch = Math.cosh(z), sech2 = 1 / (ch * ch); return rPdf(Math.tanh(z), n, rho, sech2) * sech2; };
+    let sum = g(za) + g(zb);
+    for (let i = 1; i < N; i++) sum += (i % 2 ? 4 : 2) * g(za + i * hstep);
+    return Math.min(1, sum * hstep / 3);
+  }
+
+  return { lgamma, ibeta, gammaP, gammaQ, normCdf, bisect, tCdf, tQuantileUpper, fCdf, fQuantile,
+    chiCdf, chiQuantile, nctCdf, ncfCdf, ncChiCdf, rPdf, rProb };
+})();
+
+// ---------------- Testdefinitionen ----------------
+const apa = (x, d = 2) => x.toFixed(d).replace(/^(-?)0\./, '$1.');
+const sizeN = [{ id: 'N', label: 'Gesamtstichprobe N', def: '60', int: true }];
+// Varianzanalysen: wie G*Power auf gleich große Gruppen aufrunden (Einheit = n pro Gruppe)
+const balanced = key => ({ unitMin: () => 2, nMin: p => p[key] + 1,
+  fromUnit: (m, p) => ({ N: m * p[key] }), toUnit: (s, p) => ({ unit: s.N / p[key], p }) });
+const perGroup = (s, k) => (s.N % k === 0 ? `${s.N / k} pro Gruppe` : `bei gleich großen Gruppen: ${k} × ${Math.ceil(s.N / k)} = ${k * Math.ceil(s.N / k)}`);
+const P = {
+  k: { id: 'k', label: 'Anzahl Gruppen k', def: '3', int: true, min: 2 },
+  m: { id: 'm', label: 'Anzahl Messzeitpunkte m', def: '3', int: true, min: 2 },
+  rho: { id: 'rho', label: 'Korrelation zwischen Messungen ρ', def: '0.5', min: -0.99, max: 0.99,
+    hint: 'Mittlere Korrelation der Messwiederholungen' },
+  eps: { id: 'eps', label: 'Sphärizitätskorrektur ε', def: '1', min: 0, max: 1,
+    hint: '1 = Sphärizität erfüllt; Untergrenze 1/(m − 1)' },
+};
+const TESTS = [
+  { id: 't_ind', fam: 't-Tests (Mittelwerte)', label: 'Zwei unabhängige Gruppen',
+    acc: 'einen t-Test für unabhängige Stichproben', es: 'd', helper: 'd2', tails: true,
+    params: [{ id: 'ratio', label: 'Verhältnis n₂ / n₁', def: '1', min: 0.01, max: 100, aprioriOnly: true, hint: '1 = gleich große Gruppen' }],
+    sizes: [{ id: 'n1', label: 'n₁ (Gruppe 1)', def: '30', int: true }, { id: 'n2', label: 'n₂ (Gruppe 2)', def: '30', int: true }],
+    unitMin: () => 2,
+    fromUnit: (m, p) => ({ n1: m, n2: Math.max(2, Math.ceil(m * p.ratio - 1e-9)) }),
+    toUnit: (s, p) => ({ unit: s.n1, p: Object.assign({}, p, { ratio: s.n2 / s.n1 }) }),
+    total: s => s.n1 + s.n2,
+    model: (s, e) => ({ dist: 't', df: s.n1 + s.n2 - 2, nc: e * Math.sqrt(s.n1 * s.n2 / (s.n1 + s.n2)) }),
+    sizeText: s => `n₁ = ${s.n1}, n₂ = ${s.n2}`, describe: () => '' },
+  { id: 't_pair', fam: 't-Tests (Mittelwerte)', label: 'Zwei abhängige Messungen (gepaart)',
+    acc: 'einen t-Test für abhängige Stichproben', es: 'dz', helper: 'dz', tails: true, params: [],
+    sizes: [{ id: 'N', label: 'Anzahl Paare N', def: '30', int: true }],
+    unitMin: () => 2, model: (s, e) => ({ dist: 't', df: s.N - 1, nc: e * Math.sqrt(s.N) }),
+    sizeText: () => '', describe: () => '' },
+  { id: 't_one', fam: 't-Tests (Mittelwerte)', label: 'Eine Stichprobe gegen festen Wert',
+    acc: 'einen Einstichproben-t-Test', es: 'd', helper: 'd1', tails: true, params: [],
+    sizes: [{ id: 'N', label: 'Stichprobengröße N', def: '30', int: true }],
+    unitMin: () => 2, model: (s, e) => ({ dist: 't', df: s.N - 1, nc: e * Math.sqrt(s.N) }),
+    sizeText: () => '', describe: () => '' },
+
+  { id: 'anova1', fam: 'Varianzanalysen (F-Tests)', label: 'Einfaktorielle ANOVA (Omnibus-Test)',
+    acc: 'eine einfaktorielle Varianzanalyse', es: 'f', helper: 'f', params: [P.k],
+    ...balanced('k'),
+    model: (s, e, p) => ({ dist: 'F', d1: p.k - 1, d2: s.N - p.k, nc: e * e * s.N }),
+    sizeText: (s, p) => perGroup(s, p.k), describe: p => `k = ${p.k} Gruppen` },
+  { id: 'anova_spec', fam: 'Varianzanalysen (F-Tests)', label: 'Mehrfaktorielle ANOVA: Haupteffekt / Interaktion',
+    acc: 'einen Effekt in einer mehrfaktoriellen Varianzanalyse', es: 'f', helper: 'f',
+    note: 'Zählerfreiheitsgrade: Haupteffekt mit a Stufen → a − 1; Interaktion A × B → (a − 1)(b − 1). Anzahl Zellen: a × b (× …).',
+    params: [{ id: 'dfn', label: 'Zählerfreiheitsgrade', def: '1', int: true, min: 1 },
+             { id: 'g', label: 'Anzahl Zellen (Gruppen)', def: '4', int: true, min: 2 }],
+    ...balanced('g'),
+    model: (s, e, p) => ({ dist: 'F', d1: p.dfn, d2: s.N - p.g, nc: e * e * s.N }),
+    sizeText: (s, p) => perGroup(s, p.g), describe: p => `Zählerfreiheitsgrade = ${p.dfn}, ${p.g} Zellen` },
+  { id: 'rm_within', fam: 'Varianzanalysen (F-Tests)', label: 'Messwiederholung: Innersubjekteffekt',
+    acc: 'den Innersubjekteffekt einer Varianzanalyse mit Messwiederholung', es: 'f', helper: 'f', rm: true,
+    params: [Object.assign({}, P.k, { def: '1', min: 1 }), P.m, P.rho, P.eps],
+    ...balanced('k'),
+    model: (s, e, p) => ({ dist: 'F', d1: (p.m - 1) * p.eps, d2: (s.N - p.k) * (p.m - 1) * p.eps,
+      nc: e * e * s.N * p.m * p.eps / (1 - p.rho) }),
+    sizeText: (s, p) => p.k > 1 ? perGroup(s, p.k) : '',
+    describe: p => `${p.k > 1 ? `k = ${p.k} Gruppen, ` : ''}m = ${p.m} Messzeitpunkte, ρ = ${apa(p.rho)}, ε = ${+p.eps.toFixed(3)}` },
+  { id: 'rm_between', fam: 'Varianzanalysen (F-Tests)', label: 'Messwiederholung: Zwischensubjekteffekt',
+    acc: 'den Zwischensubjekteffekt einer Varianzanalyse mit Messwiederholung', es: 'f', helper: 'f', rm: true,
+    params: [Object.assign({}, P.k, { def: '2' }), P.m, P.rho],
+    ...balanced('k'),
+    model: (s, e, p) => ({ dist: 'F', d1: p.k - 1, d2: s.N - p.k, nc: e * e * s.N * p.m / (1 + (p.m - 1) * p.rho) }),
+    sizeText: (s, p) => perGroup(s, p.k), describe: p => `k = ${p.k} Gruppen, m = ${p.m} Messzeitpunkte, ρ = ${apa(p.rho)}` },
+  { id: 'rm_inter', fam: 'Varianzanalysen (F-Tests)', label: 'Messwiederholung: Interaktion Inner × Zwischen',
+    acc: 'die Interaktion Messzeitpunkt × Gruppe einer Varianzanalyse mit Messwiederholung', es: 'f', helper: 'f', rm: true,
+    params: [Object.assign({}, P.k, { def: '2' }), P.m, P.rho, P.eps],
+    ...balanced('k'),
+    model: (s, e, p) => ({ dist: 'F', d1: (p.k - 1) * (p.m - 1) * p.eps, d2: (s.N - p.k) * (p.m - 1) * p.eps,
+      nc: e * e * s.N * p.m * p.eps / (1 - p.rho) }),
+    sizeText: (s, p) => perGroup(s, p.k),
+    describe: p => `k = ${p.k} Gruppen, m = ${p.m} Messzeitpunkte, ρ = ${apa(p.rho)}, ε = ${+p.eps.toFixed(3)}` },
+
+  { id: 'reg_r2', fam: 'Regression (F-Tests)', label: 'Multiple Regression: R² gegen 0',
+    acc: 'eine multiple lineare Regression (Test von R² gegen 0)', es: 'f2', helper: 'f2',
+    params: [{ id: 'pp', label: 'Anzahl Prädiktoren', def: '3', int: true, min: 1 }],
+    unitMin: p => p.pp + 2,
+    model: (s, e, p) => ({ dist: 'F', d1: p.pp, d2: s.N - p.pp - 1, nc: e * s.N }),
+    sizeText: () => '', describe: p => `${p.pp} Prädiktor${p.pp > 1 ? 'en' : ''}` },
+  { id: 'reg_inc', fam: 'Regression (F-Tests)', label: 'Multiple Regression: Zuwachs ΔR²',
+    acc: 'den Zuwachs an erklärter Varianz (ΔR²) in einer multiplen Regression', es: 'f2', helper: 'f2',
+    params: [{ id: 'q', label: 'Anzahl getesteter Prädiktoren', def: '1', int: true, min: 1 },
+             { id: 'pp', label: 'Prädiktoren insgesamt', def: '3', int: true, min: 1, hint: 'Einschließlich der getesteten' }],
+    unitMin: p => p.pp + 2,
+    model: (s, e, p) => ({ dist: 'F', d1: p.q, d2: s.N - p.pp - 1, nc: e * s.N }),
+    sizeText: () => '', describe: p => `${p.q} von ${p.pp} Prädiktoren getestet` },
+
+  { id: 'corr', fam: 'Korrelation', label: 'Korrelation gegen ρ = 0',
+    acc: 'den Test einer Produkt-Moment-Korrelation gegen ρ = 0', es: 'rho', helper: 'rho', tails: true, params: [],
+    unitMin: () => 4, model: (s, e) => ({ dist: 'r', n: s.N, rho: e, df: s.N - 2 }),
+    sizeText: () => '', describe: () => '' },
+
+  { id: 'chi', fam: 'χ²-Tests (Häufigkeiten)', label: 'Anpassungstest / Kontingenztafel',
+    acc: 'einen χ²-Test', es: 'w', helper: 'w',
+    note: 'Freiheitsgrade: Anpassungstest mit c Kategorien → c − 1; Kontingenztafel r × c → (r − 1)(c − 1).',
+    params: [{ id: 'df', label: 'Freiheitsgrade df', def: '1', int: true, min: 1 }],
+    unitMin: () => 2, model: (s, e, p) => ({ dist: 'chi2', df: p.df, nc: e * e * s.N }),
+    sizeText: () => '', describe: p => `df = ${p.df}` },
+];
+TESTS.forEach(T => {
+  T.sizes = T.sizes || sizeN;
+  T.fromUnit = T.fromUnit || (m => ({ N: m }));
+  T.toUnit = T.toUnit || ((s, p) => ({ unit: s.N, p }));
+  T.total = T.total || (s => s.N);
+});
+
+const ES = {
+  d: { sym: 'd', name: 'Cohens d', conv: [0.2, 0.5, 0.8], start: 0.5 },
+  dz: { sym: 'd<sub>z</sub>', txt: 'dz', name: 'Cohens dz', conv: [0.2, 0.5, 0.8], start: 0.5 },
+  f: { sym: 'f', name: 'Cohens f', conv: [0.1, 0.25, 0.4], start: 0.25 },
+  f2: { sym: 'f²', name: 'Cohens f²', conv: [0.02, 0.15, 0.35], start: 0.15 },
+  w: { sym: 'w', name: 'Cohens w', conv: [0.1, 0.3, 0.5], start: 0.3 },
+  rho: { sym: 'ρ', name: 'Korrelation ρ', conv: [0.1, 0.3, 0.5], start: 0.3, max: 0.9999, noZero: true },
+};
+
+// ---------------- Power-Berechnung ----------------
+function evaluate(T, s, es, p, alpha, tails) {
+  const e = Math.abs(es);
+  const M = T.model(s, e, p);
+  if (M.dist === 't') {
+    if (tails === 2) {
+      const tc = Stat.tQuantileUpper(alpha / 2, M.df);
+      M.crit = [-tc, tc];
+      M.power = 1 - Stat.nctCdf(tc, M.df, M.nc) + Stat.nctCdf(-tc, M.df, M.nc);
+    } else {
+      const tc = Stat.tQuantileUpper(alpha, M.df);
+      M.crit = [tc];
+      M.power = 1 - Stat.nctCdf(tc, M.df, M.nc);
+    }
+  } else if (M.dist === 'F') {
+    const fc = Stat.fQuantile(1 - alpha, M.d1, M.d2);
+    M.crit = [fc];
+    M.power = 1 - Stat.ncfCdf(fc, M.d1, M.d2, M.nc);
+  } else if (M.dist === 'chi2') {
+    const cc = Stat.chiQuantile(1 - alpha, M.df);
+    M.crit = [cc];
+    M.power = 1 - Stat.ncChiCdf(cc, M.df, M.nc);
+  } else if (M.dist === 'r') {
+    const tc = Stat.tQuantileUpper(tails === 2 ? alpha / 2 : alpha, M.df);
+    const rc = tc / Math.sqrt(tc * tc + M.df);
+    M.tcrit = tc;
+    if (tails === 2) {
+      M.crit = [-rc, rc];
+      M.power = Stat.rProb(M.n, M.rho, rc, 1) + Stat.rProb(M.n, M.rho, -1, -rc);
+    } else {
+      M.crit = [rc];
+      M.power = Stat.rProb(M.n, M.rho, rc, 1);
+    }
+  }
+  M.power = Math.min(1, Math.max(0, M.power));
+  return M;
+}
+
+function aPriori(T, p, es, alpha, tails, target) {
+  const pw = m => evaluate(T, T.fromUnit(m, p), es, p, alpha, tails).power;
+  let lo = T.unitMin(p);
+  if (pw(lo) >= target) return lo;
+  let hi = lo;
+  for (;;) {
+    hi *= 2;
+    if (hi > 2e7) return null;
+    if (pw(hi) >= target) break;
+    lo = hi;
+  }
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (pw(mid) >= target) hi = mid; else lo = mid;
+  }
+  return hi;
+}
+
+function sensitivity(T, s, p, alpha, tails, target, esKey) {
+  const E = ES[esKey];
+  const pw = e => evaluate(T, s, e, p, alpha, tails).power;
+  let lo = 0, hi = E.start;
+  const cap = E.max || 1e4;
+  while (pw(hi) < target) {
+    lo = hi;
+    hi = E.max ? hi + (cap - hi) / 2 : hi * 2;
+    if (hi >= cap * 0.99999 || hi > 1e3) return null;
+  }
+  for (let i = 0; i < 60; i++) {
+    const mid = 0.5 * (lo + hi);
+    if (pw(mid) >= target) hi = mid; else lo = mid;
+    if (hi - lo < 1e-7) break;
+  }
+  return hi;
+}
+</script>
+
+<!-- ===================== Oberfläche ===================== -->
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const num = str => { const v = parseFloat(String(str).trim().replace(',', '.')); return isFinite(v) ? v : NaN; };
+const fmt = (x, d) => x.toFixed(d);
+
+const state = { test: 't_ind', analysis: 'apriori', vals: { alpha: '0.05', power: '0.80', tails: '2' } };
+const ANALYSIS_HINT = {
+  apriori: 'Wie viele Personen brauche ich? Vorgegeben werden α, die gewünschte Power und die erwartete Effektgröße.',
+  posthoc: 'Welche Power hat ein Test bei gegebener Stichprobengröße und angenommener Effektgröße?',
+  sens: 'Welchen Effekt kann eine Studie mit gegebenem N und gewünschter Power mindestens zuverlässig entdecken?',
+};
+const testById = id => TESTS.find(t => t.id === id);
+
+// ---------- Effektgrößen-Rechner ----------
+const HELPERS = {
+  d2: [{ title: 'Aus Mittelwerten und Standardabweichungen', fields: [['m1', 'M₁'], ['s1', 'SD₁'], ['m2', 'M₂'], ['s2', 'SD₂']],
+    calc: v => Math.abs(v.m1 - v.m2) / Math.sqrt((v.s1 * v.s1 + v.s2 * v.s2) / 2),
+    note: 'd = |M₁ − M₂| / √((SD₁² + SD₂²) / 2)' }],
+  d1: [{ title: 'Aus Mittelwert, Vergleichswert und SD', fields: [['m', 'M'], ['mu', 'μ₀ (Vergleichswert)'], ['s', 'SD']],
+    calc: v => Math.abs(v.m - v.mu) / v.s, note: 'd = |M − μ₀| / SD' }],
+  dz: [{ title: 'Aus Mittelwert und SD der Differenzen', fields: [['md', 'M der Differenzen'], ['sd', 'SD der Differenzen']],
+    calc: v => Math.abs(v.md) / v.sd, note: 'dz = |M_diff| / SD_diff' },
+    { title: 'Aus beiden Messungen und ihrer Korrelation', fields: [['m1', 'M₁'], ['s1', 'SD₁'], ['m2', 'M₂'], ['s2', 'SD₂'], ['r', 'r₁₂']],
+    calc: v => Math.abs(v.m1 - v.m2) / Math.sqrt(v.s1 * v.s1 + v.s2 * v.s2 - 2 * v.r * v.s1 * v.s2),
+    note: 'SD_diff = √(SD₁² + SD₂² − 2·r·SD₁·SD₂)' }],
+  f: [{ title: 'Aus η² bzw. partiellem η²', fields: [['eta', 'η²']],
+    calc: v => (v.eta > 0 && v.eta < 1) ? Math.sqrt(v.eta / (1 - v.eta)) : NaN, note: 'f = √(η² / (1 − η²))' },
+    { title: 'Aus Gruppenmittelwerten (gleich große Gruppen)', fields: [['means', 'Mittelwerte (mit ; trennen)', 'text'], ['sw', 'SD innerhalb']],
+    calc: v => { if (!v.means || v.means.length < 2) return NaN; const mu = v.means.reduce((a, b) => a + b, 0) / v.means.length;
+      return Math.sqrt(v.means.reduce((a, b) => a + (b - mu) * (b - mu), 0) / v.means.length) / v.sw; },
+    note: 'f = σ_Mittelwerte / σ_innerhalb' },
+    { title: 'Aus d (zwei Gruppen)', fields: [['d', 'd']], calc: v => Math.abs(v.d) / 2, note: 'f = d / 2' }],
+  f2: [{ title: 'Aus R²', fields: [['r2', 'R²']], calc: v => (v.r2 >= 0 && v.r2 < 1) ? v.r2 / (1 - v.r2) : NaN, note: 'f² = R² / (1 − R²)' },
+    { title: 'Aus ΔR² und R² des vollen Modells', fields: [['dr2', 'ΔR²'], ['r2f', 'R² (volles Modell)']],
+    calc: v => (v.r2f < 1) ? v.dr2 / (1 - v.r2f) : NaN, note: 'f² = ΔR² / (1 − R²_voll)' },
+    { title: 'Aus partiellem η²', fields: [['eta', 'partielles η²']], calc: v => (v.eta < 1) ? v.eta / (1 - v.eta) : NaN, note: 'f² = η²p / (1 − η²p)' }],
+  w: [{ title: 'Aus Cramérs V oder φ', fields: [['v', 'V bzw. φ'], ['kmin', 'min(Zeilen, Spalten)']],
+    calc: v => v.v * Math.sqrt(v.kmin - 1), note: 'w = V · √(min(r, c) − 1); bei 2 × 2: w = φ' },
+    { title: 'Aus erwarteten und vermuteten Anteilen', fields: [['p0', 'Anteile unter H0 (mit ; trennen)', 'text'], ['p1', 'Anteile unter H1 (mit ; trennen)', 'text']],
+    calc: v => { if (!v.p0 || !v.p1 || v.p0.length !== v.p1.length || v.p0.length < 2) return NaN;
+      return Math.sqrt(v.p0.reduce((a, q, i) => a + (v.p1[i] - q) * (v.p1[i] - q) / q, 0)); },
+    note: 'w = √(Σ (p₁ − p₀)² / p₀); Anteile summieren sich jeweils zu 1' }],
+  rho: [{ title: 'Aus dem Determinationskoeffizienten r²', fields: [['r2', 'r²']], calc: v => Math.sqrt(v.r2), note: 'ρ = √r²' }],
+};
+
+function helperHTML(key) {
+  const list = HELPERS[key] || [];
+  if (!list.length) return '';
+  return `<details class="helper"><summary>Effektgröße aus Kennwerten bestimmen</summary><div class="inner">${
+    list.map((h, i) => `<div class="hblock" data-h="${i}"><div class="title">${esc(h.title)}</div><div class="grid">${
+      h.fields.map(f => `<div><label for="h_${i}_${f[0]}">${esc(f[1])}</label><input type="text" inputmode="${f[2] === 'text' ? 'text' : 'decimal'}" id="h_${i}_${f[0]}" data-f="${f[0]}" data-t="${f[2] || ''}"></div>`).join('')
+    }</div><div class="out"><span>${esc(h.note)}</span><span class="hres" aria-live="polite"></span><button type="button" class="btn ghost" disabled>Übernehmen</button></div></div>`).join('')
+  }</div></details>`;
+}
+
+function bindHelpers(key) {
+  const list = HELPERS[key] || [];
+  document.querySelectorAll('.hblock').forEach(block => {
+    const h = list[+block.dataset.h];
+    const out = block.querySelector('.hres'), btn = block.querySelector('button');
+    let val = NaN;
+    const upd = () => {
+      const v = {};
+      block.querySelectorAll('input').forEach(inp => {
+        v[inp.dataset.f] = inp.dataset.t === 'text'
+          ? inp.value.split(/[;\s]+/).filter(Boolean).map(num) : num(inp.value);
+        if (Array.isArray(v[inp.dataset.f]) && v[inp.dataset.f].some(isNaN)) v[inp.dataset.f] = null;
+      });
+      val = h.calc(v);
+      const ok = isFinite(val) && val > 0;
+      out.textContent = ok ? `→ ${ES[testById(state.test).es].txt || ES[testById(state.test).es].sym} = ${fmt(val, 3)}` : '';
+      btn.disabled = !ok;
+    };
+    block.addEventListener('input', upd);
+    btn.addEventListener('click', () => {
+      const inp = $('f_es');
+      inp.value = fmt(val, 3);
+      state.vals.es = inp.value;
+      schedule();
+    });
+  });
+}
+
+// ---------- Formular ----------
+function fieldHTML(f, value) {
+  return `<div class="field"><label for="f_${f.id}">${f.label}</label><input type="text" inputmode="decimal" id="f_${f.id}" data-id="${f.id}" value="${esc(value)}">${f.hint ? `<div class="hint">${f.hint}</div>` : ''}</div>`;
+}
+function buildForm() {
+  const T = testById(state.test), E = ES[T.es], a = state.analysis, V = state.vals;
+  if (V['es_' + T.es] === undefined) V['es_' + T.es] = String(E.start);
+  V.es = V['es_' + T.es];
+  let h = '';
+  if (T.tails) {
+    h += `<div class="field"><label for="f_tails">Testrichtung</label><select id="f_tails" data-id="tails">
+      <option value="2"${V.tails === '2' ? ' selected' : ''}>zweiseitig (ungerichtet)</option>
+      <option value="1"${V.tails === '1' ? ' selected' : ''}>einseitig (gerichtet)</option></select></div>`;
+  }
+  if (a !== 'sens') {
+    h += `<div class="field"><label for="f_es">Effektgröße ${E.sym} <span style="font-weight:400;color:var(--muted)">(${E.name})</span></label>
+      <input type="text" inputmode="decimal" id="f_es" data-id="es" value="${esc(V.es)}">
+      <div class="chips">${E.conv.map((c, i) => `<button type="button" class="chip" data-v="${c}">${['klein', 'mittel', 'groß'][i]} ${E.noZero ? apa(c, 2).replace(/0$/, '') : c}</button>`).join('')}
+      <span class="hint" style="align-self:center;font-size:.76rem;color:var(--muted)">Konventionen nach Cohen</span></div>
+      ${helperHTML(T.helper)}</div>`;
+  }
+  h += '<div class="row2">' + fieldHTML({ id: 'alpha', label: 'α-Fehler' }, V.alpha);
+  if (a !== 'posthoc') h += fieldHTML({ id: 'power', label: 'Power (1 − β)' }, V.power);
+  h += '</div>';
+  if (a !== 'apriori') {
+    const sz = T.sizes.map(f => fieldHTML(f, V[f.id] !== undefined ? V[f.id] : f.def)).join('');
+    h += T.sizes.length > 1 ? `<div class="row2">${sz}</div>` : sz;
+  }
+  T.params.forEach(f => {
+    if (f.aprioriOnly && a !== 'apriori') return;
+    const key = T.id + ':' + f.id;
+    h += fieldHTML(f, V[key] !== undefined ? V[key] : f.def);
+  });
+  $('fields').innerHTML = h;
+  let note = T.note ? `<p class="note">${T.note}</p>` : '';
+  if (T.rm) note += `<p class="note">Die Effektgröße f bezieht sich hier (wie in der Standardeinstellung von G*Power) auf die Streuung der Mittelwerte relativ zur Streuung innerhalb eines Messzeitpunkts; die Korrelation ρ wird separat berücksichtigt. Ein partielles η² aus einer SPSS-Ausgabe zur Messwiederholung enthält die Korrelation bereits. Direkt in f umgerechnet, wird der Effekt dann doppelt aufgewertet und N unterschätzt.</p>`;
+  $('testNote').innerHTML = note;
+  $('fields').querySelectorAll('input,select').forEach(el => {
+    el.addEventListener('input', () => {
+      const id = el.dataset.id;
+      const isParam = T.params.some(f => f.id === id);
+      state.vals[isParam ? T.id + ':' + id : id] = el.value;
+      if (id === 'es') state.vals['es_' + T.es] = el.value;
+      schedule();
+    });
+  });
+  $('fields').querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    $('f_es').value = c.dataset.v; state.vals.es = state.vals['es_' + T.es] = c.dataset.v; schedule();
+  }));
+  bindHelpers(T.helper);
+  $('analysisHint').textContent = ANALYSIS_HINT[a];
+  schedule(0);
+}
+
+// ---------- Eingaben lesen und prüfen ----------
+function readInputs() {
+  const T = testById(state.test), a = state.analysis, V = state.vals, errs = [];
+  document.querySelectorAll('#fields input.bad').forEach(el => el.classList.remove('bad'));
+  const bad = (id, msg) => { errs.push(msg); const el = $('f_' + id); if (el) el.classList.add('bad'); };
+  const get = (id, key) => num(V[key || id]);
+  const out = { T, a, tails: T.tails ? +V.tails : 1, p: {} };
+  out.alpha = get('alpha');
+  if (!(out.alpha > 0 && out.alpha < 0.5)) bad('alpha', 'α muss zwischen 0 und .5 liegen.');
+  if (a !== 'posthoc') {
+    out.target = get('power');
+    if (!(out.target > 0 && out.target < 1)) bad('power', 'Die Power muss zwischen 0 und 1 liegen.');
+    else if (out.target <= out.alpha) bad('power', 'Die gewünschte Power muss größer als α sein.');
+  }
+  if (a !== 'sens') {
+    out.es = Math.abs(get('es'));
+    const E = ES[T.es];
+    if (!(out.es > 0)) bad('es', 'Die Effektgröße muss größer als 0 sein.');
+    else if (E.max && out.es >= 1) bad('es', 'ρ muss kleiner als 1 sein.');
+  }
+  T.params.forEach(f => {
+    if (f.aprioriOnly && a !== 'apriori') return;
+    const key = T.id + ':' + f.id;
+    let v = num(V[key] !== undefined ? V[key] : f.def);
+    if (isNaN(v)) return bad(f.id, `${f.label}: bitte eine Zahl eingeben.`);
+    if (f.int && Math.round(v) !== v) return bad(f.id, `${f.label}: bitte eine ganze Zahl eingeben.`);
+    if (f.min !== undefined && v < f.min) return bad(f.id, `${f.label}: mindestens ${f.min}.`);
+    if (f.max !== undefined && v > f.max) return bad(f.id, `${f.label}: höchstens ${f.max}.`);
+    out.p[f.id] = v;
+  });
+  if (out.p.eps !== undefined && out.p.m !== undefined && out.p.eps < 1 / (out.p.m - 1) - 1e-9)
+    bad('eps', `ε muss mindestens 1/(m − 1) = ${fmt(1 / (out.p.m - 1), 3)} betragen.`);
+  if (out.p.q !== undefined && out.p.pp !== undefined && out.p.q > out.p.pp)
+    bad('q', 'Die Zahl der getesteten Prädiktoren darf die Gesamtzahl nicht übersteigen.');
+  if (a !== 'apriori') {
+    out.s = {};
+    T.sizes.forEach(f => {
+      const v = num(V[f.id] !== undefined ? V[f.id] : f.def);
+      if (!(v > 0) || Math.round(v) !== v) bad(f.id, `${f.label}: bitte eine positive ganze Zahl eingeben.`);
+      out.s[f.id] = v;
+    });
+    if (!errs.length) {
+      const nTot = T.total(out.s), minN = T.nMin ? T.nMin(out.p) : T.unitMin(out.p);
+      if (T.id === 't_ind') { if (out.s.n1 < 2 || out.s.n2 < 2) bad('n1', 'Jede Gruppe braucht mindestens 2 Personen.'); }
+      else if (nTot < minN) bad('N', `N muss für diesen Test mindestens ${minN} betragen.`);
+    }
+  }
+  out.errs = errs;
+  return out;
+}
+
+// ---------- Rechnen ----------
+let timer = null;
+function schedule(ms = 220) {
+  clearTimeout(timer);
+  $('result').classList.add('busy');
+  timer = setTimeout(run, ms);
+}
+
+function run() {
+  $('result').classList.remove('busy');
+  const I = readInputs();
+  if (I.errs.length) {
+    $('result').innerHTML = `<div class="errorbox">${I.errs.map(esc).join('<br>')}</div>`;
+    $('distPlot').innerHTML = $('curvePlot').innerHTML = $('curveTable').innerHTML = $('distLegend').innerHTML = '';
+    return;
+  }
+  const { T, a, p, alpha, tails } = I;
+  let s, es, res, unit, pCurve = p;
+  try {
+    if (a === 'apriori') {
+      es = I.es;
+      unit = aPriori(T, p, es, alpha, tails, I.target);
+      if (unit === null) throw new Error('Die gewünschte Power wird erst bei einer unrealistisch großen Stichprobe erreicht. Bitte Effektgröße prüfen.');
+      s = T.fromUnit(unit, p);
+    } else {
+      s = I.s;
+      const u = T.toUnit(s, p); unit = u.unit; pCurve = u.p;
+      es = a === 'posthoc' ? I.es : sensitivity(T, s, p, alpha, tails, I.target, T.es);
+      if (es === null) throw new Error('Mit diesem N lässt sich die gewünschte Power für keinen realistischen Effekt erreichen.');
+    }
+    res = evaluate(T, s, es, p, alpha, tails);
+  } catch (e) {
+    $('result').innerHTML = `<div class="errorbox">${esc(e.message)}</div>`;
+    $('distPlot').innerHTML = $('curvePlot').innerHTML = $('curveTable').innerHTML = $('distLegend').innerHTML = '';
+    return;
+  }
+  renderResult(I, s, es, res);
+  drawDist(res, tails);
+  drawCurve(T, pCurve, es, alpha, tails, unit, a === 'posthoc' ? null : I.target, res.power);
+}
+
+// ---------- Ergebnis ----------
+function esText(T, es) { const E = ES[T.es]; return `${E.txt || E.sym} = ${E.noZero ? apa(es, 2) : fmt(es, 2)}`; }
+function renderResult(I, s, es, r) {
+  const { T, a, p, alpha, tails } = I, E = ES[T.es];
+  const N = T.total(s), st = T.sizeText(s, p);
+  let big, lbl;
+  if (a === 'apriori') { big = `N = ${N}`; lbl = 'benötigte Gesamtstichprobe'; }
+  else if (a === 'posthoc') { big = apa(r.power, 3); lbl = 'Power (1 − β)'; }
+  else { big = `${E.sym} = ${E.noZero ? apa(es, 3) : fmt(es, 3)}`; lbl = 'kleinster entdeckbarer Effekt'; }
+  const kv = [];
+  if (a === 'apriori') kv.push(['Tatsächliche Power', apa(r.power, 4)]);
+  if (a === 'posthoc') kv.push(['β-Fehler', apa(1 - r.power, 4)]);
+  if (a !== 'apriori') kv.push(['Gesamt-N', N]);
+  if (T.id === 't_ind') { kv.push(['n₁', s.n1]); kv.push(['n₂', s.n2]); }
+  if (a === 'sens') kv.push(['Power (1 − β)', apa(r.power, 4)]);
+  const critTxt = r.crit.length === 2 ? `±${fmt(r.crit[1], 4)}` : fmt(r.crit[0], 4);
+  if (r.dist === 't') {
+    kv.push(['Nonzentralität δ', fmt(r.nc, 4)], ['Kritisches t', critTxt], ['df', r.df]);
+  } else if (r.dist === 'F') {
+    kv.push(['Nonzentralität λ', fmt(r.nc, 4)], ['Kritisches F', critTxt],
+      ['df Zähler / Nenner', `${+r.d1.toFixed(3)} / ${+r.d2.toFixed(3)}`]);
+  } else if (r.dist === 'chi2') {
+    kv.push(['Nonzentralität λ', fmt(r.nc, 4)], ['Kritisches χ²', critTxt], ['df', r.df]);
+  } else {
+    kv.push(['Kritisches r', r.crit.length === 2 ? `±${apa(r.crit[1], 4)}` : apa(r.crit[0], 4)],
+      ['Kritisches t', (r.crit.length === 2 ? '±' : '') + fmt(r.tcrit, 4)], ['df', r.df]);
+  }
+  // Textbaustein
+  const desc = [T.describe(p), T.tails ? (tails === 2 ? 'zweiseitig' : 'einseitig') : ''].filter(Boolean).join(', ');
+  const what = T.acc + (desc ? ` (${desc})` : '');
+  const nInfo = `N = ${N}${T.id === 't_ind' ? ` (n₁ = ${s.n1}, n₂ = ${s.n2})` : ''}`;
+  let rep;
+  if (a === 'apriori')
+    rep = `Eine a-priori-Poweranalyse für ${what} ergab bei einer erwarteten Effektgröße von ${esText(T, es)}, α = ${apa(alpha)} und einer angestrebten Power von 1 − β = ${apa(I.target)} eine benötigte Stichprobengröße von ${nInfo}. Die tatsächliche Power beträgt ${apa(r.power, 3)}.`;
+  else if (a === 'posthoc')
+    rep = `Eine Poweranalyse für ${what} ergab bei ${nInfo}, einer angenommenen Effektgröße von ${esText(T, es)} und α = ${apa(alpha)} eine Power von 1 − β = ${apa(r.power, 3)}.`;
+  else
+    rep = `Eine Sensitivitätsanalyse für ${what} ergab, dass mit ${nInfo} bei α = ${apa(alpha)} und einer Power von 1 − β = ${apa(I.target)} Effekte ab ${E.txt || E.sym} = ${E.noZero ? apa(es, 2) : fmt(es, 2)} entdeckt werden können.`;
+
+  $('result').innerHTML = `
+    <div class="headline"><span class="big">${big}</span><span class="lbl">${lbl}</span></div>
+    ${st ? `<p class="sub">${esc(st)}</p>` : '<p class="sub"></p>'}
+    <dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    <h3 style="margin-top:18px">Textbaustein für den Methodenteil</h3>
+    <div class="report" id="reportText">${rep}</div>
+    <div class="report-actions"><span id="copyMsg"></span><button type="button" class="btn ghost" id="copyBtn">Text kopieren</button></div>`;
+  $('copyBtn').addEventListener('click', async () => {
+    const txt = $('reportText').innerText;
+    try { await navigator.clipboard.writeText(txt); $('copyMsg').textContent = 'Kopiert'; }
+    catch (e) {
+      const range = document.createRange(); range.selectNodeContents($('reportText'));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      $('copyMsg').textContent = 'Text markiert, bitte mit ⌘C kopieren';
+    }
+  });
+}
+
+// ---------- Diagramm-Hilfen ----------
+function niceTicks(lo, hi, n) {
+  const span = hi - lo;
+  if (!(span > 0)) return [lo];
+  let step = Math.pow(10, Math.floor(Math.log10(span / n)));
+  const err = span / n / step;
+  if (err >= 7.5) step *= 10; else if (err >= 3.5) step *= 5; else if (err >= 1.5) step *= 2;
+  const out = [];
+  for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + step * 1e-9; v += step) out.push(+v.toFixed(10));
+  return { ticks: out, step };
+}
+const tickLabel = (v, step) => { const d = Math.max(0, -Math.floor(Math.log10(step) + 1e-9)); return v.toFixed(d).replace('-', '−'); };
+
+function attachHover(container, svg, geo, onMove) {
+  const tip = document.createElement('div'); tip.className = 'tip'; container.appendChild(tip);
+  const cross = svg.querySelector('.cross');
+  const overlay = svg.querySelector('.overlay');
+  const move = ev => {
+    const rect = svg.getBoundingClientRect();
+    const sx = (ev.clientX - rect.left) * geo.W / rect.width;
+    if (sx < geo.ml || sx > geo.W - geo.mr) { leave(); return; }
+    const info = onMove(sx);
+    if (!info) { leave(); return; }
+    cross.setAttribute('x1', info.px); cross.setAttribute('x2', info.px); cross.style.display = '';
+    tip.innerHTML = info.html; tip.style.display = 'block';
+    const pxScreen = info.px * rect.width / geo.W;
+    const cw = container.clientWidth, tw = tip.offsetWidth;
+    let left = pxScreen + 14; if (left + tw > cw) left = pxScreen - tw - 14;
+    tip.style.left = Math.max(0, left) + 'px';
+    tip.style.top = '8px';
+  };
+  const leave = () => { tip.style.display = 'none'; cross.style.display = 'none'; };
+  overlay.addEventListener('pointermove', move);
+  overlay.addEventListener('pointerdown', move);
+  overlay.addEventListener('pointerleave', leave);
+}
+
+// ---------- Verteilungsdiagramm ----------
+function drawDist(r, tails) {
+  const W = 640, H = 290, ml = 14, mr = 14, mt = 22, mb = 36, pw = W - ml - mr, ph = H - mt - mb;
+  let c0, c1, f0, f1, lo, hi;
+  const deriv = (cdf, lower) => x => {
+    const h = (hi - lo) * 1e-4, a = lower !== undefined ? Math.max(lower, x - h) : x - h, b = x + h;
+    return Math.max(0, (cdf(b) - cdf(a)) / (b - a));
+  };
+  const qGen = (cdf, pr, start, lower) => {
+    let a = lower !== undefined ? lower : start - 1, b = start + 1;
+    while (cdf(b) < pr) b = b + (b - (lower !== undefined ? lower : start)) * 1 + 1;
+    if (lower === undefined) while (cdf(a) > pr) a = a - (start - a) - 1;
+    return Stat.bisect(cdf, pr, a, b, 80);
+  };
+  if (r.dist === 't') {
+    c0 = x => Stat.tCdf(x, r.df); c1 = x => Stat.nctCdf(x, r.df, r.nc);
+    const q0 = Math.min(Stat.tQuantileUpper(0.001, r.df), 8);
+    lo = Math.min(-q0, Math.max(qGen(c1, 0.001, r.nc), -10));
+    hi = Math.max(q0, Math.min(qGen(c1, 0.999, r.nc), Math.max(10, r.nc * 3 + 5)));
+    if (r.crit.length === 2) { lo = Math.min(lo, r.crit[0] - 0.5); hi = Math.max(hi, r.crit[1] + 0.5); }
+    f0 = deriv(c0); f1 = deriv(c1);
+  } else if (r.dist === 'F' || r.dist === 'chi2') {
+    if (r.dist === 'F') { c0 = x => Stat.fCdf(x, r.d1, r.d2); c1 = x => Stat.ncfCdf(x, r.d1, r.d2, r.nc); }
+    else { c0 = x => Stat.chiCdf(x, r.df); c1 = x => Stat.ncChiCdf(x, r.df, r.nc); }
+    lo = 0;
+    hi = Math.max(qGen(c0, 0.999, r.crit[0], 0), qGen(c1, 0.995, r.crit[0], 0), r.crit[0] * 1.2);
+    f0 = deriv(c0, 0); f1 = deriv(c1, 0);
+  } else {
+    const s = 1 / Math.sqrt(Math.max(r.n - 3, 1)), mu = Math.atanh(r.rho);
+    lo = Math.max(-1, Math.min(Math.tanh(-4.5 * s), Math.tanh(mu - 4.5 * s)));
+    hi = Math.min(1, Math.max(Math.tanh(4.5 * s), Math.tanh(mu + 4.5 * s)));
+    f0 = x => Stat.rPdf(x, r.n, 0); f1 = x => Stat.rPdf(x, r.n, r.rho);
+  }
+  const n = 240, xs = [], y0 = [], y1 = [];
+  for (let i = 0; i <= n; i++) {
+    const x = lo + (hi - lo) * (i / n) + (i === 0 && lo === 0 ? (hi - lo) * 1e-3 : 0);
+    xs.push(x); y0.push(f0(x)); y1.push(f1(x));
+  }
+  const skip = (r.dist === 'F' || r.dist === 'chi2') ? Math.ceil(n * 0.03) : 0;
+  let yMax = 0;
+  for (let i = 0; i <= n; i++) { yMax = Math.max(yMax, y1[i]); if (i >= skip) yMax = Math.max(yMax, y0[i]); }
+  yMax *= 1.08;
+  const X = x => ml + (x - lo) / (hi - lo) * pw, Y = y => mt + ph - Math.min(y, yMax * 1.2) / yMax * ph;
+  const line = ys => xs.map((x, i) => `${i ? 'L' : 'M'}${X(x).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join('');
+  const area = (f, a, b) => {
+    a = Math.max(a, lo); b = Math.min(b, hi);
+    if (!(b > a)) return '';
+    const k = 80; let d = `M${X(a).toFixed(1)},${Y(0).toFixed(1)}`;
+    for (let i = 0; i <= k; i++) { const x = a + (b - a) * i / k; d += `L${X(x).toFixed(1)},${Y(f(i === 0 && x === 0 ? x + (hi - lo) * 1e-3 : x)).toFixed(1)}`; }
+    return d + `L${X(b).toFixed(1)},${Y(0).toFixed(1)}Z`;
+  };
+  const cr = r.crit;
+  let aPaths = '', bPath = '';
+  if (cr.length === 2) {
+    aPaths = area(f0, lo, cr[0]) + area(f0, cr[1], hi);
+    bPath = area(f1, cr[0], cr[1]);
+  } else {
+    aPaths = area(f0, cr[0], hi);
+    bPath = area(f1, lo, cr[0]);
+  }
+  const { ticks, step } = niceTicks(lo, hi, 7);
+  const xName = { t: 't', F: 'F', chi2: 'χ²', r: 'r' }[r.dist];
+  const peak = ys => { let j = skip; for (let i = skip; i <= n; i++) if (ys[i] > ys[j]) j = i; return j; };
+  const p0 = peak(y0), p1 = peak(y1);
+  const lab = (i, ys, txt, col) => {
+    const yy = Math.max(mt + 10, Y(ys[i]) - 8);
+    return `<text x="${X(xs[i]).toFixed(1)}" y="${yy.toFixed(1)}" text-anchor="middle" style="fill:${col};font-weight:600">${txt}</text>`;
+  };
+  const sameSpot = Math.abs(X(xs[p0]) - X(xs[p1])) < 40;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dichten der Teststatistik unter H0 und H1 mit kritischem Wert">
+    <defs><clipPath id="clipDist"><rect x="${ml}" y="${mt - 4}" width="${pw}" height="${ph + 4}"/></clipPath></defs>
+    <line x1="${ml}" x2="${W - mr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--border)" stroke-width="1"/>
+    ${ticks.map(t => `<line x1="${X(t)}" x2="${X(t)}" y1="${Y(0)}" y2="${Y(0) + 4}" stroke="var(--border)"/><text x="${X(t)}" y="${Y(0) + 18}" text-anchor="middle">${tickLabel(t, step)}</text>`).join('')}
+    <text x="${W - mr}" y="${H - 2}" text-anchor="end" style="font-style:italic">${xName}</text>
+    <g clip-path="url(#clipDist)">
+      <path d="${bPath}" fill="var(--s2-fill)"/>
+      <path d="${aPaths}" fill="var(--s1-fill)"/>
+      <path d="${line(y0)}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="${line(y1)}" fill="none" stroke="var(--s2)" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+    ${cr.map(c => `<line x1="${X(c)}" x2="${X(c)}" y1="${mt - 6}" y2="${Y(0)}" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>`).join('')}
+    <text x="${X(cr[cr.length - 1]) + 5}" y="${mt + 2}" style="font-size:11px">krit. = ${(r.dist === 'r' ? apa(cr[cr.length - 1], 3) : fmt(cr[cr.length - 1], 3))}</text>
+    ${lab(p0, y0, 'H0', 'var(--s1)')}${sameSpot ? '' : lab(p1, y1, 'H1', 'var(--s2)')}
+    <line class="cross" x1="0" x2="0" y1="${mt}" y2="${Y(0)}" stroke="var(--text-2)" stroke-width="1" style="display:none"/>
+    <rect class="overlay" x="${ml}" y="0" width="${pw}" height="${H}" fill="transparent"/>
+  </svg>`;
+  const box = $('distPlot');
+  box.innerHTML = svg;
+  attachHover(box, box.querySelector('svg'), { W, ml, mr }, sx => {
+    const i = Math.round((sx - ml) / pw * n);
+    if (i < 0 || i > n) return null;
+    const dx = r.dist === 'r' ? apa(xs[i], 3) : fmt(xs[i], 3);
+    return { px: X(xs[i]), html: `<b>${xName} = ${dx.replace('-', '−')}</b><br><span class="k" style="background:var(--s1)"></span>Dichte H0: ${fmt(y0[i], 4)}<br><span class="k" style="background:var(--s2)"></span>Dichte H1: ${fmt(y1[i], 4)}` };
+  });
+  $('distLegend').innerHTML = `
+    <span><i class="sw" style="background:var(--s1)"></i>H0 (zentrale Verteilung)</span>
+    <span><i class="sw" style="background:var(--s2)"></i>H1 (nonzentrale Verteilung)</span>
+    <span><i class="sw box" style="background:var(--s1-fill);outline:1px solid var(--s1)"></i>α (Fehler 1. Art)</span>
+    <span><i class="sw box" style="background:var(--s2-fill);outline:1px solid var(--s2)"></i>β (Fehler 2. Art)</span>
+    <span><i class="sw dash"></i>kritischer Wert</span>`;
+}
+
+// ---------- Powerkurve ----------
+function drawCurve(T, p, es, alpha, tails, unit, target, curPower) {
+  const W = 640, H = 270, ml = 44, mr = 16, mt = 14, mb = 40, pw = W - ml - mr, ph = H - mt - mb;
+  const uMin = T.unitMin(p);
+  const uMax = Math.max(uMin + 10, Math.ceil(unit * 2));
+  const units = [];
+  const K = 70;
+  for (let i = 0; i <= K; i++) { const u = Math.round(uMin + (uMax - uMin) * i / K); if (!units.length || units[units.length - 1] !== u) units.push(u); }
+  if (!units.includes(unit)) { units.push(unit); units.sort((a, b) => a - b); }
+  const pts = units.map(u => { const s = T.fromUnit(u, p); return { N: T.total(s), pw: evaluate(T, s, es, p, alpha, tails).power, u }; });
+  const cur = pts.find(q => q.u === unit);
+  const xLo = pts[0].N, xHi = pts[pts.length - 1].N;
+  const X = x => ml + (x - xLo) / (xHi - xLo) * pw, Y = y => mt + ph - y * ph;
+  const { ticks, step } = niceTicks(xLo, xHi, 7);
+  const d = pts.map((q, i) => `${i ? 'L' : 'M'}${X(q.N).toFixed(1)},${Y(q.pw).toFixed(1)}`).join('');
+  const yt = [0, 0.2, 0.4, 0.6, 0.8, 1];
+  const labRight = X(cur.N) > ml + pw * 0.7;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Power in Abhängigkeit von der Gesamtstichprobe">
+    ${yt.map(y => `<line x1="${ml}" x2="${W - mr}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--grid)"/><text x="${ml - 8}" y="${Y(y) + 4}" text-anchor="end">${y === 0 ? '0' : y === 1 ? '1' : apa(y, 1)}</text>`).join('')}
+    ${ticks.filter(t => Math.abs(t - Math.round(t)) < 1e-9).map(t => `<line x1="${X(t)}" x2="${X(t)}" y1="${Y(0)}" y2="${Y(0) + 4}" stroke="var(--border)"/><text x="${X(t)}" y="${Y(0) + 18}" text-anchor="middle">${t}</text>`).join('')}
+    <text x="${W - mr}" y="${H - 2}" text-anchor="end">Gesamt-N</text>
+    <text x="10" y="${mt + ph / 2}" transform="rotate(-90 10 ${mt + ph / 2})" text-anchor="middle">Power</text>
+    ${target ? `<line x1="${ml}" x2="${W - mr}" y1="${Y(target)}" y2="${Y(target)}" stroke="var(--text-2)" stroke-dasharray="4 3"/><text x="${ml + 6}" y="${Y(target) - 6}" style="font-size:11px">Zielpower ${apa(target)}</text>` : ''}
+    <path d="${d}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${X(cur.N)}" cy="${Y(cur.pw)}" r="5" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>
+    <text x="${X(cur.N) + (labRight ? -10 : 10)}" y="${Y(cur.pw) + 18}" text-anchor="${labRight ? 'end' : 'start'}" style="font-weight:600;fill:var(--text)">N = ${cur.N}, Power = ${apa(cur.pw, 3)}</text>
+    <line class="cross" x1="0" x2="0" y1="${mt}" y2="${Y(0)}" stroke="var(--text-2)" stroke-width="1" style="display:none"/>
+    <rect class="overlay" x="${ml}" y="0" width="${pw}" height="${H}" fill="transparent"/>
+  </svg>`;
+  const box = $('curvePlot');
+  box.innerHTML = svg;
+  attachHover(box, box.querySelector('svg'), { W, ml, mr }, sx => {
+    const xv = xLo + (sx - ml) / pw * (xHi - xLo);
+    let best = pts[0];
+    for (const q of pts) if (Math.abs(q.N - xv) < Math.abs(best.N - xv)) best = q;
+    return { px: X(best.N), html: `<b>N = ${best.N}</b><br><span class="k" style="background:var(--s1)"></span>Power: ${apa(best.pw, 3)}` };
+  });
+  const stepT = Math.max(1, Math.ceil(pts.length / 15));
+  const rows = pts.filter((q, i) => i % stepT === 0 || q === cur || i === pts.length - 1);
+  $('curveTable').innerHTML = `<table class="data"><thead><tr><th>Gesamt-N</th><th>Power</th></tr></thead><tbody>${
+    rows.map(q => `<tr${q === cur ? ' style="font-weight:700"' : ''}><td>${q.N}</td><td>${apa(q.pw, 3)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- Initialisierung ----------
+const sel = $('test');
+const fams = [...new Set(TESTS.map(t => t.fam))];
+sel.innerHTML = fams.map(f => `<optgroup label="${esc(f)}">${TESTS.filter(t => t.fam === f).map(t => `<option value="${t.id}">${esc(t.label)}</option>`).join('')}</optgroup>`).join('');
+sel.value = state.test;
+sel.addEventListener('change', () => { state.test = sel.value; buildForm(); });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  state.analysis = b.dataset.a;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  buildForm();
+}));
+buildForm();
+})();
+</script>
+</body>
+</html>
